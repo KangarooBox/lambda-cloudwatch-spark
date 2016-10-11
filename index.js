@@ -3,29 +3,21 @@ var url = require('url');
 var https = require('https');
 var config = require('./config');
 var _ = require('lodash');
-var hookUrl;
+var accessToken;
 
-var baseSparkMessage = {
-  toPersonId: config.toPersonId,
-  // channel: config.slackChannel,
-  // username: config.slackUsername,
-  // icon_emoji: config.icon_emoji,
-  // attachments: [
-  //   {
-  //     "footer": config.orgName,
-  //     "footer_icon": config.orgIcon
-  //   }
-  // ]
-}
+var baseSparkMessage = {}
+if(config.roomId){ baseSparkMessage.roomId = config.roomId };
+if(config.toPersonId){ baseSparkMessage.toPersonId = config.toPersonId };
+if(config.toPersonEmail){ baseSparkMessage.toPersonEmail = config.toPersonEmail };
 
 var postMessage = function(message, callback) {
   var body = JSON.stringify(message);
-  var options = url.parse(hookUrl);
+  var options = url.parse(config.hookUrl);
   options.method = 'POST';
   options.headers = {
     'Content-Type': 'application/json',
     'Content-Length': Buffer.byteLength(body),
-    'Authorization': 'Bearer ' + config.accessToken,
+    'Authorization': 'Bearer ' + accessToken,
   };
 
   var postReq = https.request(options, function(res) {
@@ -84,16 +76,10 @@ var handleElasticBeanstalk = function(event, context) {
 
   var sparkMessage = {
     text: "*" + subject + "*",
-    attachments: [
-      {
-        "fields": [
-          { "title": "Subject", "value": event.Records[0].Sns.Subject, "short": false},
-          { "title": "Message", "value": message, "short": false}
-        ],
-        "color": color,
-        "ts":  timestamp
-      }
-    ]
+    markdown: "###" + subject
+    + "\n\n**Subject:**<br />  " + event.Records[0].Sns.Subject
+    + "<br />  "
+    + "\n\n**Message:**<pre>" + message + "</pre>"
   };
 
   return _.merge(baseSparkMessage, sparkMessage);
@@ -115,32 +101,24 @@ var handleCodeDeploy = function(event, context) {
     } else if(message.status === "FAILED"){
       color = "danger";
     }
-    fields.push({ "title": "Message", "value": snsSubject, "short": false });
-    fields.push({ "title": "Deployment Group", "value": message.deploymentGroupName, "short": true });
-    fields.push({ "title": "Application", "value": message.applicationName, "short": true });
-    fields.push({
-      "title": "Status Link",
-      "value": "https://console.aws.amazon.com/codedeploy/home?region=" + message.region + "#/deployments/" + message.deploymentId,
-      "short": false
-    });
+    fields.body = "\n\n**Deployment Group:**<br />  " + message.deploymentGroupName
+    + "\n\n**Application:**<br />  " + message.applicationName
+    + "<br />  "
+    + "\n\n**Status Link:**<br />  " + "https://console.aws.amazon.com/codedeploy/home?region=" + message.region + "#/deployments/" + message.deploymentId
   }
   catch(e) {
     color = "good";
     message = event.Records[0].Sns.Message;
-    fields.push({ "title": "Message", "value": snsSubject, "short": false });
-    fields.push({ "title": "Detail", "value": message, "short": false });
+    fields.body = "\n\n**Detail:**<pre>" + message + "</pre>"
   }
 
 
   var sparkMessage = {
     text: "*" + subject + "*",
-    attachments: [
-      {
-        "color": color,
-        "fields": fields,
-        "ts": timestamp
-      }
-    ]
+    markdown: "###" + subject
+    + "\n\n**Message:**<br />  " + snsSubject
+    + "<br />  "
+    + fields.body
   };
 
   return _.merge(baseSparkMessage, sparkMessage);
@@ -158,24 +136,18 @@ var handleElasticache = function(event, context) {
     nodename = message[key];
     break;
   }
+
   var sparkMessage = {
     text: "*" + subject + "*",
-    attachments: [
-      {
-        "color": color,
-        "fields": [
-          { "title": "Event", "value": eventname.split(":")[1], "short": true },
-          { "title": "Node", "value": nodename, "short": true },
-          {
-            "title": "Link to cache node",
-            "value": "https://console.aws.amazon.com/elasticache/home?region=" + config.region + "#cache-nodes:id=" + nodename + ";nodes",
-            "short": false
-          }
-        ],
-        "ts": timestamp
-      }
-    ]
+    markdown: "###" + subject
+    + "\n\n**Event:**<br />  " + eventname.split(":")[1]
+    + "<br />  "
+    + "\n\n**Node:**<br />  " + nodename
+    + "<br />  "
+    + "\n\n**Link to cache node:**<br />  "
+    + "https://console.aws.amazon.com/elasticache/home?region=" + config.region + "#cache-nodes:id=" + nodename + ";nodes"
   };
+
   return _.merge(baseSparkMessage, sparkMessage);
 };
 
@@ -201,11 +173,11 @@ var handleCloudWatch = function(event, context) {
   var sparkMessage = {
     text: "*" + subject + "*",
     markdown: "###" + subject
-    + "\n\n**Alarm Name:** " + "<br />  " + alarmName
+    + "\n\n**Alarm Name:**<br />  " + alarmName
     + "<br />  "
-    + "\n\n**Alarm Reason:** " + "<br />  " + alarmReason
+    + "\n\n**Alarm Reason:**<br />  " + alarmReason
     + "<br />  "
-    + "\n\n**Trigger:** " + "<br />  " + trigger.Statistic
+    + "\n\n**Trigger:**<br />  " + trigger.Statistic
       + " " + metricName + " "
       + trigger.ComparisonOperator + " " + trigger.Threshold + " for "
       + trigger.EvaluationPeriods + " period(s) of "
@@ -214,34 +186,7 @@ var handleCloudWatch = function(event, context) {
     + "\n\n**Old State:** " + oldState
     + "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**Current State:** " + newState
     + "<br />  "
-    + "\n\n**Link to Alarm:** "  + "<br />  " + "https://console.aws.amazon.com/cloudwatch/home?region=" + config.region + "#alarm:alarmFilter=ANY;name=" + alarmName
-    // attachments: [
-    //   {
-    //     "color": color,
-    //     "fields": [
-    //       { "title": "Alarm Name", "value": alarmName, "short": true },
-    //       { "title": "Alarm Description", "value": alarmReason, "short": false},
-    //       {
-    //         "title": "Trigger",
-    //         "value": trigger.Statistic + " "
-    //           + metricName + " "
-    //           + trigger.ComparisonOperator + " "
-    //           + trigger.Threshold + " for "
-    //           + trigger.EvaluationPeriods + " period(s) of "
-    //           + trigger.Period + " seconds.",
-    //           "short": false
-    //       },
-    //       { "title": "Old State", "value": oldState, "short": true },
-    //       { "title": "Current State", "value": newState, "short": true },
-    //       {
-    //         "title": "Link to Alarm",
-    //         "value": "https://console.aws.amazon.com/cloudwatch/home?region=" + config.region + "#alarm:alarmFilter=ANY;name=" + alarmName,
-    //         "short": false
-    //       }
-    //     ],
-    //     "ts":  timestamp
-    //   }
-    // ]
+    + "\n\n**Link to Alarm:**<br />  " + "https://console.aws.amazon.com/cloudwatch/home?region=" + config.region + "#alarm:alarmFilter=ANY;name=" + alarmName
   };
   return _.merge(baseSparkMessage, sparkMessage);
 };
@@ -258,22 +203,20 @@ var handleAutoScaling = function(event, context) {
     nodename = message[key];
     break;
   }
+
   var sparkMessage = {
     text: "*" + subject + "*",
-    attachments: [
-      {
-        "color": color,
-        "fields": [
-          { "title": "Message", "value": event.Records[0].Sns.Subject, "short": false },
-          { "title": "Description", "value": message.Description, "short": false },
-          { "title": "Event", "value": message.Event, "short": false },
-          { "title": "Cause", "value": message.Cause, "short": false }
-
-        ],
-        "ts": timestamp
-      }
-    ]
+    markdown: "###" + subject
+    + "\n\n**Message:**<br />  " + event.Records[0].Sns.Subject
+    + "<br />  "
+    + "\n\n**Description:**<br />  " + message.Description
+    + "<br />  "
+    + "\n\n**Event:**<br />  " + message.Event
+    + "<br />  "
+    + "\n\n**Cause:**<br />  " + message.Cause
+    + "<br />  "
   };
+
   return _.merge(baseSparkMessage, sparkMessage);
 };
 
@@ -324,13 +267,13 @@ var processEvent = function(event, context) {
 };
 
 exports.handler = function(event, context) {
-  if (hookUrl) {
+  if (accessToken) {
     processEvent(event, context);
-  } else if (config.unencryptedHookUrl) {
-    hookUrl = config.unencryptedHookUrl;
+  } else if (config.unencryptedAccessToken) {
+    accessToken = config.unencryptedAccessToken;
     processEvent(event, context);
-  } else if (config.kmsEncryptedHookUrl && config.kmsEncryptedHookUrl !== '<kmsEncryptedHookUrl>') {
-    var encryptedBuf = new Buffer(config.kmsEncryptedHookUrl, 'base64');
+  } else if (config.kmsEncryptedAccessToken && config.kmsEncryptedAccessToken !== '<kmsEncryptedAccessToken>') {
+    var encryptedBuf = new Buffer(config.kmsEncryptedAccessToken, 'base64');
     var cipherText = { CiphertextBlob: encryptedBuf };
     var kms = new AWS.KMS();
 
@@ -339,11 +282,11 @@ exports.handler = function(event, context) {
         console.log("decrypt error: " + err);
         processEvent(event, context);
       } else {
-        hookUrl = "https://" + data.Plaintext.toString('ascii');
+        accessToken = data.Plaintext.toString('ascii');
         processEvent(event, context);
       }
     });
   } else {
-    context.fail('hook url has not been set.');
+    context.fail('access token has not been set.');
   }
 };
