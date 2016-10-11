@@ -5,16 +5,17 @@ var config = require('./config');
 var _ = require('lodash');
 var hookUrl;
 
-var baseSlackMessage = {
-  channel: config.slackChannel,
-  username: config.slackUsername,
-  icon_emoji: config.icon_emoji,
-  attachments: [
-    {
-      "footer": config.orgName,
-      "footer_icon": config.orgIcon
-    }
-  ]
+var baseSparkMessage = {
+  toPersonId: config.toPersonId,
+  // channel: config.slackChannel,
+  // username: config.slackUsername,
+  // icon_emoji: config.icon_emoji,
+  // attachments: [
+  //   {
+  //     "footer": config.orgName,
+  //     "footer_icon": config.orgIcon
+  //   }
+  // ]
 }
 
 var postMessage = function(message, callback) {
@@ -24,6 +25,7 @@ var postMessage = function(message, callback) {
   options.headers = {
     'Content-Type': 'application/json',
     'Content-Length': Buffer.byteLength(body),
+    'Authorization': 'Bearer ' + config.accessToken,
   };
 
   var postReq = https.request(options, function(res) {
@@ -80,7 +82,7 @@ var handleElasticBeanstalk = function(event, context) {
     color = "warning";
   }
 
-  var slackMessage = {
+  var sparkMessage = {
     text: "*" + subject + "*",
     attachments: [
       {
@@ -94,7 +96,7 @@ var handleElasticBeanstalk = function(event, context) {
     ]
   };
 
-  return _.merge(baseSlackMessage, slackMessage);
+  return _.merge(baseSparkMessage, sparkMessage);
 };
 
 var handleCodeDeploy = function(event, context) {
@@ -130,7 +132,7 @@ var handleCodeDeploy = function(event, context) {
   }
 
 
-  var slackMessage = {
+  var sparkMessage = {
     text: "*" + subject + "*",
     attachments: [
       {
@@ -141,7 +143,7 @@ var handleCodeDeploy = function(event, context) {
     ]
   };
 
-  return _.merge(baseSlackMessage, slackMessage);
+  return _.merge(baseSparkMessage, sparkMessage);
 };
 
 var handleElasticache = function(event, context) {
@@ -156,7 +158,7 @@ var handleElasticache = function(event, context) {
     nodename = message[key];
     break;
   }
-  var slackMessage = {
+  var sparkMessage = {
     text: "*" + subject + "*",
     attachments: [
       {
@@ -174,7 +176,7 @@ var handleElasticache = function(event, context) {
       }
     ]
   };
-  return _.merge(baseSlackMessage, slackMessage);
+  return _.merge(baseSparkMessage, sparkMessage);
 };
 
 var handleCloudWatch = function(event, context) {
@@ -196,37 +198,52 @@ var handleCloudWatch = function(event, context) {
       color = "good";
   }
 
-  var slackMessage = {
+  var sparkMessage = {
     text: "*" + subject + "*",
-    attachments: [
-      {
-        "color": color,
-        "fields": [
-          { "title": "Alarm Name", "value": alarmName, "short": true },
-          { "title": "Alarm Description", "value": alarmReason, "short": false},
-          {
-            "title": "Trigger",
-            "value": trigger.Statistic + " "
-              + metricName + " "
-              + trigger.ComparisonOperator + " "
-              + trigger.Threshold + " for "
-              + trigger.EvaluationPeriods + " period(s) of "
-              + trigger.Period + " seconds.",
-              "short": false
-          },
-          { "title": "Old State", "value": oldState, "short": true },
-          { "title": "Current State", "value": newState, "short": true },
-          {
-            "title": "Link to Alarm",
-            "value": "https://console.aws.amazon.com/cloudwatch/home?region=" + config.region + "#alarm:alarmFilter=ANY;name=" + alarmName,
-            "short": false
-          }
-        ],
-        "ts":  timestamp
-      }
-    ]
+    markdown: "###" + subject
+    + "\n\n**Alarm Name:** " + "<br />  " + alarmName
+    + "<br />  "
+    + "\n\n**Alarm Reason:** " + "<br />  " + alarmReason
+    + "<br />  "
+    + "\n\n**Trigger:** " + "<br />  " + trigger.Statistic
+      + " " + metricName + " "
+      + trigger.ComparisonOperator + " " + trigger.Threshold + " for "
+      + trigger.EvaluationPeriods + " period(s) of "
+      + trigger.Period + " seconds."
+    + "<br />  "
+    + "\n\n**Old State:** " + oldState
+    + "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**Current State:** " + newState
+    + "<br />  "
+    + "\n\n**Link to Alarm:** "  + "<br />  " + "https://console.aws.amazon.com/cloudwatch/home?region=" + config.region + "#alarm:alarmFilter=ANY;name=" + alarmName
+    // attachments: [
+    //   {
+    //     "color": color,
+    //     "fields": [
+    //       { "title": "Alarm Name", "value": alarmName, "short": true },
+    //       { "title": "Alarm Description", "value": alarmReason, "short": false},
+    //       {
+    //         "title": "Trigger",
+    //         "value": trigger.Statistic + " "
+    //           + metricName + " "
+    //           + trigger.ComparisonOperator + " "
+    //           + trigger.Threshold + " for "
+    //           + trigger.EvaluationPeriods + " period(s) of "
+    //           + trigger.Period + " seconds.",
+    //           "short": false
+    //       },
+    //       { "title": "Old State", "value": oldState, "short": true },
+    //       { "title": "Current State", "value": newState, "short": true },
+    //       {
+    //         "title": "Link to Alarm",
+    //         "value": "https://console.aws.amazon.com/cloudwatch/home?region=" + config.region + "#alarm:alarmFilter=ANY;name=" + alarmName,
+    //         "short": false
+    //       }
+    //     ],
+    //     "ts":  timestamp
+    //   }
+    // ]
   };
-  return _.merge(baseSlackMessage, slackMessage);
+  return _.merge(baseSparkMessage, sparkMessage);
 };
 
 var handleAutoScaling = function(event, context) {
@@ -241,7 +258,7 @@ var handleAutoScaling = function(event, context) {
     nodename = message[key];
     break;
   }
-  var slackMessage = {
+  var sparkMessage = {
     text: "*" + subject + "*",
     attachments: [
       {
@@ -257,46 +274,46 @@ var handleAutoScaling = function(event, context) {
       }
     ]
   };
-  return _.merge(baseSlackMessage, slackMessage);
+  return _.merge(baseSparkMessage, sparkMessage);
 };
 
 var processEvent = function(event, context) {
   console.log("sns received:" + JSON.stringify(event, null, 2));
-  var slackMessage = null;
+  var sparkMessage = null;
   var eventSubscriptionArn = event.Records[0].EventSubscriptionArn;
   var eventSnsSubject = event.Records[0].Sns.Subject || 'no subject';
   var eventSnsMessage = event.Records[0].Sns.Message;
 
   if(eventSubscriptionArn.indexOf(config.services.elasticbeanstalk.match_text) > -1 || eventSnsSubject.indexOf(config.services.elasticbeanstalk.match_text) > -1 || eventSnsMessage.indexOf(config.services.elasticbeanstalk.match_text) > -1){
     console.log("processing elasticbeanstalk notification");
-    slackMessage = handleElasticBeanstalk(event,context)
+    sparkMessage = handleElasticBeanstalk(event,context)
   }
   else if(eventSubscriptionArn.indexOf(config.services.cloudwatch.match_text) > -1 || eventSnsSubject.indexOf(config.services.cloudwatch.match_text) > -1 || eventSnsMessage.indexOf(config.services.cloudwatch.match_text) > -1){
     console.log("processing cloudwatch notification");
-    slackMessage = handleCloudWatch(event,context);
+    sparkMessage = handleCloudWatch(event,context);
   }
   else if(eventSubscriptionArn.indexOf(config.services.codedeploy.match_text) > -1 || eventSnsSubject.indexOf(config.services.codedeploy.match_text) > -1 || eventSnsMessage.indexOf(config.services.codedeploy.match_text) > -1){
     console.log("processing codedeploy notification");
-    slackMessage = handleCodeDeploy(event,context);
+    sparkMessage = handleCodeDeploy(event,context);
   }
   else if(eventSubscriptionArn.indexOf(config.services.elasticache.match_text) > -1 || eventSnsSubject.indexOf(config.services.elasticache.match_text) > -1 || eventSnsMessage.indexOf(config.services.elasticache.match_text) > -1){
     console.log("processing elasticache notification");
-    slackMessage = handleElasticache(event,context);
+    sparkMessage = handleElasticache(event,context);
   }
   else if(eventSubscriptionArn.indexOf(config.services.autoscaling.match_text) > -1 || eventSnsSubject.indexOf(config.services.autoscaling.match_text) > -1 || eventSnsMessage.indexOf(config.services.autoscaling.match_text) > -1){
     console.log("processing autoscaling notification");
-    slackMessage = handleAutoScaling(event, context);
+    sparkMessage = handleAutoScaling(event, context);
   }
   else{
     context.fail("no matching processor for event");
   }
 
-  postMessage(slackMessage, function(response) {
+  postMessage(sparkMessage, function(response) {
     if (response.statusCode < 400) {
       console.info('message posted successfully');
       context.succeed();
     } else if (response.statusCode < 500) {
-      console.error("error posting message to slack API: " + response.statusCode + " - " + response.statusMessage);
+      console.error("error posting message to Spark API: " + response.statusCode + " - " + response.statusMessage);
       // Don't retry because the error is due to a problem with the request
       context.succeed();
     } else {
