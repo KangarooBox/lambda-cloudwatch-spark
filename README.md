@@ -12,8 +12,7 @@ This work is a direct descendant of function and wouldn't be possible without it
 This function was originally derived from the
 [lambda-cloudwatch-slack](https://github.com/assertible/lambda-cloudwatch-slack) project which was originally derived from the
 [AWS blueprint named `cloudwatch-alarm-to-spark`](https://aws.amazon.com/blogs/aws/new-spark-integration-blueprints-for-aws-lambda/). The
-function in this repo improves on the default blueprint in several
-ways:
+function in this repo improves on the default blueprint in several ways:
 
 **Better default formatting for CloudWatch notifications:**
 
