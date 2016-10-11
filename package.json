@@ -1,7 +1,7 @@
 {
   "name": "lambda-cloudwatch-spark",
   "version": "0.1.0",
-  "description": "Better Spark notifications for AWS CloudWatch",
+  "description": "Better Cisco Spark notifications for AWS CloudWatch",
   "authors": [
     "Assertible <admin@assertible.com>",
     "Christopher Reichert <creichert07@gmail.com>",
@@ -22,7 +22,7 @@
   },
   "keywords": [
     "aws",
-    "spark",
+    "cisco spark",
     "lambda",
     "cloudwatch",
     "notifications"
