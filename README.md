@@ -3,7 +3,7 @@
 An [AWS Lambda](http://aws.amazon.com/lambda/) function for better Cisco Spark notifications.
 This work is a direct descendant of function and wouldn't be possible without it.
 
-[![BuildStatus](https://travis-ci.org/kangaroobox/lambda-cloudwatch-spark.png?branch=master)](https://travis-ci.org/assertible/lambda-cloudwatch-spark)
+[![BuildStatus](https://travis-ci.org/KangarooBox/lambda-cloudwatch-spark.png?branch=master)](https://travis-ci.org/assertible/lambda-cloudwatch-spark)
 [![NPM version](https://badge.fury.io/js/lambda-cloudwatch-spark.png)](http://badge.fury.io/js/lambda-cloudwatch-spark)
 
 
