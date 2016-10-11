@@ -9,7 +9,7 @@
         "MessageId": "7f660149-f0b8-53a4-83c5-516fdaed6a4b",
         "TopicArn": "arn:aws:sns:us-east-1:123456789123:ElasticacheNotifications",
         "Subject": null,
-        "Message": "{\"ElastiCache:ElasticacheEvent\":\"nodename\"}",
+        "Message": "{\"ElastiCache:ElasticacheEvent\":\"mynodename\"}",
         "Timestamp": "2016-08-11T07:24:05.959Z",
         "MessageAttributes": {}
       }
